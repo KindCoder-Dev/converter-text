@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text to HEX Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4 py-10">
+  <main class="w-full max-w-4xl">
+    <section class="bg-slate-900/80 border border-slate-800 rounded-3xl shadow-2xl p-6 md:p-8">
+      <div class="mb-8 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Конвертер текста в HEX</h1>
+        <p class="mt-3 text-slate-400">Введите текст, получите HEX-код. Также можно декодировать HEX обратно в текст.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label for="textInput" class="font-semibold text-slate-200">Текст</label>
+            <button id="clearTextBtn" class="text-sm text-slate-400 hover:text-white transition">Очистить</button>
+          </div>
+          <textarea
+            id="textInput"
+            rows="10"
+            placeholder="Например: Hello, мир!"
+            class="w-full resize-none rounded-2xl bg-slate-950 border border-slate-700 p-4 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          ></textarea>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label for="hexOutput" class="font-semibold text-slate-200">HEX</label>
+            <button id="copyHexBtn" class="text-sm text-indigo-400 hover:text-indigo-300 transition">Скопировать</button>
+          </div>
+          <textarea
+            id="hexOutput"
+            rows="10"
+            placeholder="HEX появится здесь..."
+            class="w-full resize-none rounded-2xl bg-slate-950 border border-slate-700 p-4 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="mt-6 grid sm:grid-cols-3 gap-4">
+        <label class="flex items-center gap-3 rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 cursor-pointer">
+          <input id="spacesToggle" type="checkbox" checked class="w-4 h-4 accent-indigo-500" />
+          <span class="text-sm text-slate-300">Разделять пробелами</span>
+        </label>
+
+        <label class="flex items-center gap-3 rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 cursor-pointer">
+          <input id="prefixToggle" type="checkbox" class="w-4 h-4 accent-indigo-500" />
+          <span class="text-sm text-slate-300">Добавить 0x</span>
+        </label>
+
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-slate-300">
+          Символов: <span id="charCount" class="font-semibold text-white">0</span>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3">
+        <button
+          id="textToHexBtn"
+          class="w-full rounded-2xl bg-indigo-600 px-5 py-3 font-semibold hover:bg-indigo-500 active:scale-[0.99] transition"
+        >
+          Текст → HEX
+        </button>
+
+        <button
+          id="hexToTextBtn"
+          class="w-full rounded-2xl bg-slate-800 px-5 py-3 font-semibold hover:bg-slate-700 active:scale-[0.99] transition"
+        >
+          HEX → Текст
+        </button>
+      </div>
+
+      <p id="message" class="mt-5 min-h-6 text-center text-sm text-slate-400"></p>
+    </section>
+  </main>
+
+  <script>
+    const textInput = document.getElementById('textInput');
+    const hexOutput = document.getElementById('hexOutput');
+    const spacesToggle = document.getElementById('spacesToggle');
+    const prefixToggle = document.getElementById('prefixToggle');
+    const charCount = document.getElementById('charCount');
+    const message = document.getElementById('message');
+
+    const textToHexBtn = document.getElementById('textToHexBtn');
+    const hexToTextBtn = document.getElementById('hexToTextBtn');
+    const copyHexBtn = document.getElementById('copyHexBtn');
+    const clearTextBtn = document.getElementById('clearTextBtn');
+
+    function showMessage(text, type = 'info') {
+      message.textContent = text;
+      message.className = 'mt-5 min-h-6 text-center text-sm ' +
+        (type === 'error' ? 'text-red-400' : type === 'success' ? 'text-emerald-400' : 'text-slate-400');
+    }
+
+    function textToHex(text) {
+      const bytes = new TextEncoder().encode(text);
+      const hexArray = Array.from(bytes).map(byte => {
+        const hex = byte.toString(16).padStart(2, '0').toUpperCase();
+        return prefixToggle.checked ? '0x' + hex : hex;
+      });
+
+      return spacesToggle.checked ? hexArray.join(' ') : hexArray.join('');
+    }
+
+    function hexToText(hex) {
+      const cleanHex = hex
+        .replace(/0x/gi, '')
+        .replace(/\s+/g, '')
+        .trim();
+
+      if (!cleanHex) return '';
+
+      if (cleanHex.length % 2 !== 0) {
+        throw new Error('HEX должен содержать чётное количество символов.');
+      }
+
+      if (!/^[0-9a-fA-F]+$/.test(cleanHex)) {
+        throw new Error('HEX содержит недопустимые символы.');
+      }
+
+      const bytes = new Uint8Array(cleanHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      return new TextDecoder().decode(bytes);
+    }
+
+    function convertTextToHex() {
+      hexOutput.value = textToHex(textInput.value);
+      charCount.textContent = textInput.value.length;
+      showMessage('Готово: текст конвертирован в HEX.', 'success');
+    }
+
+    function convertHexToText() {
+      try {
+        textInput.value = hexToText(hexOutput.value);
+        charCount.textContent = textInput.value.length;
+        showMessage('Готово: HEX декодирован в текст.', 'success');
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    }
+
+    textInput.addEventListener('input', () => {
+      charCount.textContent = textInput.value.length;
+      hexOutput.value = textToHex(textInput.value);
+      showMessage('');
+    });
+
+    spacesToggle.addEventListener('change', convertTextToHex);
+    prefixToggle.addEventListener('change', convertTextToHex);
+    textToHexBtn.addEventListener('click', convertTextToHex);
+    hexToTextBtn.addEventListener('click', convertHexToText);
+
+    clearTextBtn.addEventListener('click', () => {
+      textInput.value = '';
+      hexOutput.value = '';
+      charCount.textContent = '0';
+      showMessage('Поля очищены.');
+    });
+
+    copyHexBtn.addEventListener('click', async () => {
+      if (!hexOutput.value.trim()) {
+        showMessage('Сначала сгенерируйте HEX.', 'error');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(hexOutput.value);
+        showMessage('HEX скопирован в буфер обмена.', 'success');
+      } catch {
+        showMessage('Не удалось скопировать HEX.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
